@@ -1,8 +1,5 @@
-import os
-import psycopg2
+import os, psycopg2, csv, sys
 from pathlib import Path
-
-DATAFILES_DIR = "/exercises/subject/item"
 
 def get_db_config() -> dict :
     return {
@@ -16,43 +13,57 @@ def get_db_config() -> dict :
 def create_and_fill_table(table_name, path_csv):
     DB_CONFIG = get_db_config()
 
-    commands = (
-        f"""
+    create_table = f"""
         CREATE TABLE IF NOT EXISTS {table_name} (
             product_id      int4,
             category_id     numeric(50,0),
             category_code   text,
             brand           text
         )
-        """,
-        f"""
-        COPY {table_name}(product_id,category_id,category_code,brand)
-        FROM '{path_csv}'
-        DELIMITER ','
-        CSV HEADER;
-        """,
-        )
+        """
+
+    def exec_instruction(instruction):
+        print (f"Executing instuction: {instruction}")
+        try:
+            cur.execute(instruction)
+            conn.commit()
+        except psycopg2.Error as error:
+            conn.rollback()
+            print(f"Error executing instruction: {error}")
+            raise
+    
+    def fill_table_from_csv(table_name, path_csv) -> bool:
+        print(f"Filling table: [{table_name}] with data from file: [{path_csv}]")
+        try:
+            with open(path_csv, 'r') as file:
+                reader = csv.reader(file)
+                next(reader)
+                cur.copy_from(file, table_name, sep=',', null='')
+            conn.commit()
+        except FileNotFoundError:
+            print(f"Error: CSV file not found at {path_csv}")
+            return False
+        except psycopg2.Error as error:
+            conn.rollback()
+            print(f"Error executing instruction: {error}")
+            return False
+        except Exception as error:
+            print(f"Unexpected error: {error}")
+            return False
+        return True
+
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
-                for command in commands:
-                    try:
-                        print (f"executing: {command}")
-                        cur.execute(command)
-                        conn.commit()
-                    except psycopg2.Error as error:
-                        conn.rollback()
-                        print(f"Error executing command: {error}")
-                        raise
+                exec_instruction(create_table)
+                if fill_table_from_csv(table_name, path_csv) == False:
+                    return
+
     except Exception as error:
         print(f"Exception: {error}")
-        raise
-    finally:
-        print("All commands executed")
-
-
+        sys.exit(1)
 
 if __name__ == "__main__":
-    path_file = DATAFILES_DIR + "/item.csv"
-    table_name = table_name = Path(path_file).stem
-    create_and_fill_table(table_name, path_file)
+    path_csv = '/exercises/subject/item/item.csv'
+    table_name = Path(path_csv).stem
+    create_and_fill_table(table_name, path_csv)
