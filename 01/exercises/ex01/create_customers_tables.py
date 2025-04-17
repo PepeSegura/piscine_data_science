@@ -1,6 +1,18 @@
-
 import os, glob, psycopg2, csv, sys
 from pathlib import Path
+
+import time
+from functools import wraps
+
+def timer_decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        print(f"{func.__name__} took {end_time - start_time:.4f} seconds")
+        return result
+    return wrapper
 
 DATAFILES_DIR = "/exercises/subject/customer"
 
@@ -17,7 +29,7 @@ def create_and_fill_table(table_name, path_csv):
     DB_CONFIG = get_db_config()
 
     create_table = f"""
-        CREATE TABLE IF NOT EXISTS {table_name} (
+        CREATE TABLE {table_name} (
             event_time      timestamptz,
             event_type      text,
             product_id      int4,
@@ -27,6 +39,7 @@ def create_and_fill_table(table_name, path_csv):
         )
         """
 
+    @timer_decorator
     def exec_instruction(instruction):
         print (f"Executing instuction: {instruction}")
         try:
@@ -35,8 +48,10 @@ def create_and_fill_table(table_name, path_csv):
         except psycopg2.Error as error:
             conn.rollback()
             print(f"Error executing instruction: {error}")
-            raise
-    
+            return False
+        return True
+
+    @timer_decorator
     def fill_table_from_csv(table_name, path_csv) -> bool:
         print(f"Filling table: [{table_name}] with data from file: [{path_csv}]")
         try:
@@ -60,7 +75,8 @@ def create_and_fill_table(table_name, path_csv):
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
-                exec_instruction(create_table)
+                if exec_instruction(create_table) == False:
+                    return
                 if fill_table_from_csv(table_name, path_csv) == False:
                     return
 

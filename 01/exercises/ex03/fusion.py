@@ -24,7 +24,7 @@ def get_db_config() -> dict :
         "port": os.environ.get("POSTGRES_PORT", "5432"),
     }
 
-def remove_duplicates(table_name):
+def join_tables(main_table, other_table):
     DB_CONFIG = get_db_config()
 
     @timer_decorator
@@ -39,39 +39,36 @@ def remove_duplicates(table_name):
             return False
         return True
     
-    first_clean = f"""
-    CREATE TABLE temp_{table_name} AS
-    SELECT DISTINCT ON (event_time, event_type, product_id, price, user_id, user_session) *
-    FROM {table_name};
+    clean_items_table = f"""
+    CREATE TABLE temp_{other_table} AS (
+        SELECT * FROM {other_table}
+        WHERE product_id      IS NOT NULL
+            AND category_id   IS NOT NULL
+            AND category_code IS NOT NULL
+            AND brand         IS NOT NULL
+    );
 
-    DROP TABLE {table_name};
-    ALTER TABLE temp_{table_name} RENAME TO {table_name};
+    DROP TABLE {other_table};
+    ALTER TABLE temp_{other_table} RENAME TO {other_table};
     """
 
-    remove_duplicates_instruc = f"""
-    DELETE FROM {table_name}
-    WHERE (product_id, event_type, event_time) IN (
-        SELECT product_id, event_type, event_time
-        FROM (
-            SELECT 
-                product_id,
-                event_type,
-                event_time,
-                LAG(event_time) OVER (
-                    PARTITION BY product_id, event_type
-                    ORDER BY event_time
-                ) AS prev_event_time
-            FROM {table_name}
-        ) AS subquery
-        WHERE event_time - prev_event_time <= INTERVAL '1 second'
-    );"""
+    join_tables = f"""
+    CREATE TABLE temp_{main_table} AS (
+        SELECT {main_table}.*, {other_table}.category_id, {other_table}.category_code, {other_table}.brand FROM {main_table}
+        LEFT JOIN {other_table}
+        ON {main_table}.product_id = {other_table}.product_id
+    );
+
+    DROP TABLE {main_table};
+    ALTER TABLE temp_{main_table} RENAME TO {main_table};
+    """
 
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
-                if exec_instruction(first_clean) == False:
+                if exec_instruction(clean_items_table) == False:
                     return
-                if exec_instruction(remove_duplicates_instruc) == False:
+                if exec_instruction(join_tables) == False:
                     return
 
     except Exception as error:
@@ -79,9 +76,15 @@ def remove_duplicates(table_name):
         sys.exit(1)
 
 if __name__ == "__main__":
-    remove_duplicates("customers")
-    
-    
+    join_tables("customers", "items")
+
+# CREATE TABLE all_data_together AS (
+# SELECT new_customer.*, items.category_id, items.category_code, items.brand FROM new_customer
+# LEFT JOIN items
+# ON new_customer.product_id = items.product_id
+# LIMIT 100
+# );
+
 # -- Create a new table with distinct rows
 # CREATE TABLE customer_distinct AS
 # SELECT DISTINCT ON (event_time, event_type, product_id, price, user_id, user_session) *

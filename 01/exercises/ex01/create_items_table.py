@@ -1,5 +1,5 @@
 
-import os, glob, psycopg2, csv, sys, re
+import os, glob, psycopg2, csv, sys
 from pathlib import Path
 
 import time
@@ -26,24 +26,20 @@ def get_db_config() -> dict :
         "port": os.environ.get("POSTGRES_PORT", "5432"),
     }
 
-def create_and_join_tables(table_name):
+def create_and_fill_table(table_name, path_csv):
     DB_CONFIG = get_db_config()
 
-    def get_tables():
-        instruction = """SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"""
-        try:
-            cur.execute(instruction)
-            tables = cur.fetchall()
-            table_names = []
-            for table in tables:
-                table_names.append(table[0])
-            return table_names
-        except psycopg2.Error as error:
-            conn.rollback()
-            print(f"Error executing instruction: {error}")
+    create_table = f"""
+        CREATE TABLE {table_name} (
+            product_id      int4,
+            category_id     numeric(50,0),
+            category_code   text,
+            brand           text
+        )
+        """
 
     @timer_decorator
-    def exec_instruction(instruction) -> bool:
+    def exec_instruction(instruction):
         print (f"Executing instuction: {instruction}")
         try:
             cur.execute(instruction)
@@ -54,22 +50,33 @@ def create_and_join_tables(table_name):
             return False
         return True
 
-    def check_valid_table(table_name):
-        pattern = r'^data_202\d_(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)$'
-        return bool(re.fullmatch(pattern, table_name, flags=re.IGNORECASE))
-
-    create_table_instruction = f"""CREATE TABLE {table_name} AS"""
+    @timer_decorator
+    def fill_table_from_csv(table_name, path_csv) -> bool:
+        print(f"Filling table: [{table_name}] with data from file: [{path_csv}]")
+        try:
+            with open(path_csv, 'r') as file:
+                reader = csv.reader(file)
+                next(reader)
+                cur.copy_from(file, table_name, sep=',', null='')
+            conn.commit()
+        except FileNotFoundError:
+            print(f"Error: CSV file not found at {path_csv}")
+            return False
+        except psycopg2.Error as error:
+            conn.rollback()
+            print(f"Error executing instruction: {error}")
+            return False
+        except Exception as error:
+            print(f"Unexpected error: {error}")
+            return False
+        return True
 
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
-                tables = get_tables()
-                for i, table in enumerate(tables):
-                    if check_valid_table(table) == True:
-                        create_table_instruction += f"\nSELECT * FROM {table}\n"
-                        if i < (len(tables) - 1):
-                            create_table_instruction += "UNION ALL"
-                if exec_instruction(create_table_instruction) == False:
+                if exec_instruction(create_table) == False:
+                    return
+                if fill_table_from_csv(table_name, path_csv) == False:
                     return
 
     except Exception as error:
@@ -77,4 +84,5 @@ def create_and_join_tables(table_name):
         sys.exit(1)
 
 if __name__ == "__main__":
-    create_and_join_tables("customers")
+    create_and_fill_table("items", "/exercises/subject/item/item.csv")
+    
