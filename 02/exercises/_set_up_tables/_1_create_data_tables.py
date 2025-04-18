@@ -16,7 +16,7 @@ def timer_decorator(func):
         return result
     return wrapper
 
-DATAFILES_DIR = "/exercises/subject/customer"
+DATAFILES_DIR = "/app/exercises/subject/customer"
 
 def get_db_config() -> dict :
     return {
@@ -32,7 +32,7 @@ def create_and_fill_table(table_name, path_csv):
 
     create_table = f"""
         CREATE TABLE {table_name} (
-            event_time      timestamptz,
+            event_time      timestamp,
             event_type      text,
             product_id      int4,
             price           money,
@@ -87,7 +87,9 @@ def create_and_fill_table(table_name, path_csv):
         sys.exit(1)
 
 if __name__ == "__main__":
+    print("hola")
     files = glob.glob(DATAFILES_DIR + "/data_202*_*.csv")
+    print(files)
     for file in files:
         table_name = Path(file).stem
         print (f"\nCreating table: {table_name}")

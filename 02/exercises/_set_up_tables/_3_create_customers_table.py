@@ -15,8 +15,6 @@ def timer_decorator(func):
         return result
     return wrapper
 
-DATAFILES_DIR = "/exercises/subject/customer"
-
 def get_db_config() -> dict :
     return {
         "dbname": os.environ.get("POSTGRES_DB"),

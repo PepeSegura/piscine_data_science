@@ -15,8 +15,6 @@ def timer_decorator(func):
         return result
     return wrapper
 
-DATAFILES_DIR = "/exercises/subject/customer"
-
 def get_db_config() -> dict :
     return {
         "dbname": os.environ.get("POSTGRES_DB"),
@@ -84,5 +82,5 @@ def create_and_fill_table(table_name, path_csv):
         sys.exit(1)
 
 if __name__ == "__main__":
-    create_and_fill_table("items", "/exercises/subject/item/item.csv")
+    create_and_fill_table("items", "/app/exercises/subject/item/item.csv")
     

@@ -17,24 +17,27 @@ def timer_decorator(func):
 
 def get_db_config() -> dict :
     return {
-        "dbname": os.environ.get("POSTGRES_DB"),
-        "user": os.environ.get("POSTGRES_USER"),
-        "password": os.environ.get("POSTGRES_PASSWORD"),
-        "host": os.environ.get("POSTGRES_HOST", "localhost"),
-        "port": os.environ.get("POSTGRES_PORT", "5432"),
+        "dbname"    : os.environ.get("POSTGRES_DB"),
+        "user"      : os.environ.get("POSTGRES_USER"),
+        "password"  : os.environ.get("POSTGRES_PASSWORD"),
+        "host"      : os.environ.get("POSTGRES_HOST", "localhost"),
+        "port"      : os.environ.get("POSTGRES_PORT", "5432"),
     }
 
 def get_event_types_count() -> dict:
     DB_CONFIG = get_db_config()
+    print(DB_CONFIG)
 
+    response_data = {}
     @timer_decorator
-    def exec_instruction(instruction) -> bool | dict:
+    def exec_instruction(instruction) -> bool:
         print (f"Executing instuction: {instruction}")
+        nonlocal response_data
         try:
             cur.execute(instruction)
-            result = cur.fetchall()
+            response_data = cur.fetchall()
             conn.commit()
-            return result
+            return True
         except psycopg2.Error as error:
             conn.rollback()
             print(f"Error executing instruction: {error}")
@@ -49,8 +52,9 @@ def get_event_types_count() -> dict:
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
-                return exec_instruction(get_event_types_count)
-
+                if exec_instruction(get_event_types_count) == False:
+                    return None
+        return response_data
     except Exception as error:
         print(f"Exception: {error}")
         sys.exit(1)
@@ -75,9 +79,19 @@ if __name__ == "__main__":
     print("total_count:   ", sum(types_count[x] for x in types_count))
     print("total_percent: ", sum(types_percent[x] for x in types_percent))
 
-    # # Creating plot
-    # fig = plt.figure(figsize=(10, 7))
-    # plt.pie(types_percent.values(), labels=types_percent.keys())
+    # Creating plot
+    # Create pie chart with autopct to show percentages
+    patches, texts, autotexts = plt.pie(
+        types_percent.values(),
+        labels=types_percent.keys(),
+        autopct='%.2f%%',          # Show percentages with 1 decimal place
+        wedgeprops={'linewidth': 2, 'edgecolor': 'white'},  # Add white borders
+        textprops={'fontsize': 12}  # Font size for labels
+    )
 
-    # # show plot
-    # plt.show()
+    plt.title('Exercice 00 : American apple Pie', pad=20, fontsize=14)
+    plt.tight_layout()
+    # store plot image
+    plt.savefig('/app/output/Exercice_00.png')
+
+    plt.close()
