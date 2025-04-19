@@ -26,12 +26,10 @@ def get_db_config() -> dict :
 
 def get_event_types_count() -> dict:
     DB_CONFIG = get_db_config()
-    print(DB_CONFIG)
 
     response_data = {}
     @timer_decorator
     def exec_instruction(instruction) -> bool:
-        print (f"Executing instuction: {instruction}")
         nonlocal response_data
         try:
             cur.execute(instruction)
@@ -74,11 +72,6 @@ if __name__ == "__main__":
     for x in types_count:
         types_percent[x] = (types_count[x] * 100) / total_count
 
-    print(types_count)
-    print(types_percent)
-    print("total_count:   ", sum(types_count[x] for x in types_count))
-    print("total_percent: ", sum(types_percent[x] for x in types_percent))
-
     # Creating plot
     # Create pie chart with autopct to show percentages
     patches, texts, autotexts = plt.pie(
@@ -91,7 +84,6 @@ if __name__ == "__main__":
 
     plt.title('Exercice 00 : American apple Pie', pad=20, fontsize=14)
     plt.tight_layout()
-    # store plot image
-    plt.savefig('/app/output/Exercice_00.png')
 
+    plt.savefig('./figure_1.png')
     plt.close()

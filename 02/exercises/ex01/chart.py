@@ -96,7 +96,7 @@ def create_first_chart():
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.tight_layout()
 
-    plt.savefig('/app/output/Exercice_01_customers_count.png', dpi=300, bbox_inches='tight')
+    plt.savefig('./figure_1.png', dpi=300, bbox_inches='tight')
     plt.close()
 
 def create_second_chart():
@@ -142,7 +142,7 @@ def create_second_chart():
     plt.grid(axis='y', linestyle='--', alpha=0.7)
     plt.tight_layout()
 
-    plt.savefig('/app/output/Exercice_01_total_sales.png', dpi=300, bbox_inches='tight')
+    plt.savefig('./figure_2.png', dpi=300, bbox_inches='tight')
     plt.close()
 
 
@@ -194,7 +194,7 @@ def create_third_chart():
     plt.grid(axis='y', linestyle='--', alpha=0.7)
     plt.tight_layout()
 
-    plt.savefig('/app/output/Exercice_01_avrg_sales.png', dpi=300, bbox_inches='tight')
+    plt.savefig('./figure_3.png', dpi=300, bbox_inches='tight')
     plt.close()
 
 if __name__ == "__main__":
