@@ -61,29 +61,101 @@ import pandas as pd
 
 def building():
     customers_count = f"""
-    SELECT user_id, user_session, price
-    FROM customers
-    WHERE event_type = 'purchase'
+    SELECT 
+        order_count, 
+        COUNT(user_id) AS customer_count
+    FROM (
+        SELECT 
+            user_id, 
+            CEIL(COUNT(user_session) / 10) * 10 AS order_count
+        FROM customers 
+        WHERE event_type = 'purchase' 
+        GROUP BY user_id
+    ) AS user_orders
+    GROUP BY order_count
+    ORDER BY order_count;
     """
     # LIMIT 10000
 
     data = exec_query(customers_count)
 
-    df = pd.DataFrame(data, columns=['user_id', 'user_session', 'price'])
-    df['price'] = df['price'].str.replace('$', '').astype(float)
+    df = pd.DataFrame(data, columns=['order_count', 'customer_count'])
+    print(df)
 
-    orders_count = df.groupby('user_id')['user_session'].nunique()
-        
-    # Then count how many users have 1 order, 2 orders, etc.
-    order_distribution = orders_count.value_counts().sort_index()
+    plt.figure(figsize=(10, 6))
+    plt.gcf().set_facecolor('lightgray')
+    plt.xlabel('frequency')
+    plt.ylabel('customers')
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.tight_layout()
 
-    print("Users by order count:")
-    print(order_distribution)
+    data_zoom = df[(df['order_count'] >= 0) & (df['order_count'] < 40)]
+    bars = plt.bar(data_zoom['order_count'], data_zoom['customer_count'],
+                   color='#b6c5d8',
+                   width=5,align='edge'
+    )
+    ax = plt.gca()
+    ax.set_facecolor('lightblue')
+
+    plt.savefig('./figure_1.png', dpi=300, bbox_inches='tight')
+    plt.close()
+
+def building2():
+    customers_count = f"""
+    SELECT
+        user_id,
+        COUNT(*) AS purchases,
+        SUM(price) as spend
+    FROM
+        customers
+    WHERE
+        event_type = 'purchase'
+    GROUP BY
+        user_id
+    ORDER BY
+        spend
+    LIMIT 50000;
+    """
+    # LIMIT 10000
+
+    data = exec_query(customers_count)
+
+    df = pd.DataFrame(data, columns=['user_id', 'purchases', 'spend'])
+    print(df)
+
+    plt.figure(figsize=(10, 6))
+    plt.gcf().set_facecolor('lightgray')
+    plt.xlabel('frequency')
+    plt.ylabel('customers')
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.tight_layout()
+
+    # data_zoom = df[(df['order_count'] >= 0) & (df['order_count'] < 40)]
+    bars = plt.hist(df['purchases']
+    )
+    ax = plt.gca()
+    ax.set_facecolor('lightblue')
+
+    plt.savefig('./figure_1.png', dpi=300, bbox_inches='tight')
+    plt.close()
 
 if __name__ == "__main__":
-    building()
+    building2()
    
-
+"""
+SELECT
+    user_id,
+    COUNT(*) AS purchases,
+	SUM(price) as spend
+FROM
+    customers
+WHERE
+    event_type = 'purchase'
+GROUP BY
+    user_id
+ORDER BY
+    spend ;
+"""
 """
 SELECT 
     order_count, 

@@ -152,7 +152,7 @@ def mustache():
         'capprops': dict(color=color_grey),
         'boxprops': dict(facecolor=(0, 0, 1, 0.42), color=color_grey),
         'medianprops': dict(color=color_grey),
-        'flierprops': dict(markersize=0)
+        'flierprops': dict(markersize=5)
     }
 
     basket_totals = df.groupby(['user_id','user_session'])['price'].sum().reset_index()
