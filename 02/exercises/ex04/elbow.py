@@ -59,47 +59,7 @@ import matplotlib.ticker as mtick
 import numpy as np
 import pandas as pd
 
-def building1():
-    customers_count = f"""
-    SELECT 
-        order_count, 
-        COUNT(user_id) AS customer_count
-    FROM (
-        SELECT 
-            user_id, 
-            CEIL(COUNT(user_session) / 10) * 10 AS order_count
-        FROM customers 
-        WHERE event_type = 'purchase' 
-        GROUP BY user_id
-    ) AS user_orders
-    GROUP BY order_count
-    ORDER BY order_count;
-    """
-
-    data = exec_query(customers_count)
-
-    df = pd.DataFrame(data, columns=['order_count', 'customer_count'])
-
-    plt.figure(figsize=(10, 6))
-    plt.gcf().set_facecolor('lightgray')
-    plt.xlabel('frequency')
-    plt.ylabel('customers')
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.tight_layout()
-
-    data_zoom = df[(df['order_count'] >= 0) & (df['order_count'] < 50)]
-    bars = plt.bar(data_zoom['order_count'], data_zoom['customer_count'],
-                   color='#b6c5d8',
-                   width=9,
-                   align='edge'
-    )
-    ax = plt.gca()
-    ax.set_facecolor('lightblue')
-
-    plt.savefig('./figure_1.png', dpi=200, bbox_inches='tight')
-    plt.close()
-
-def building2():
+def elbow():
     customers_count = f"""
     SELECT 
         spending_range, 
@@ -149,5 +109,4 @@ def building2():
     plt.close()
 
 if __name__ == "__main__":
-    building1()
-    building2()
+    elbow()
